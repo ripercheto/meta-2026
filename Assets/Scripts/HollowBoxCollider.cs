@@ -4,11 +4,11 @@ using UnityEngine;
 public class HollowBoxCollider : MonoBehaviour
 {
     [Header("Outer Dimensions")]
-    [Tooltip("Overall size (width X, height Y, depth Z) of the hollow box.")]
+    [Tooltip("Overall inner boundary size (width X, height Y, depth Z) of the box.")]
     public Vector3 outerSize = new Vector3(5f, 5f, 5f);
 
     [Header("Wall Thickness")]
-    [Tooltip("Thickness of each of the 6 walls.")]
+    [Tooltip("Thickness extending outwards for each of the 6 walls.")]
     [Min(0.01f)]
     public float wallThickness = 0.2f;
 
@@ -22,7 +22,6 @@ public class HollowBoxCollider : MonoBehaviour
 
     private void OnValidate()
     {
-        wallThickness = Mathf.Min(wallThickness, Mathf.Min(outerSize.x, Mathf.Min(outerSize.y, outerSize.z)) / 2f);
         UpdateColliders();
     }
 
@@ -32,7 +31,7 @@ public class HollowBoxCollider : MonoBehaviour
     }
 
     /// <summary>
-    /// Creates missing box colliders or updates existing ones with full outer dimensions so corners overlap.
+    /// Updates all 6 box colliders to sit on the outside of outerSize and overlap along all edges and corners.
     /// </summary>
     public void UpdateColliders()
     {
@@ -45,31 +44,39 @@ public class HollowBoxCollider : MonoBehaviour
         back = GetOrAddCollider("Wall_Back");
 
         // Half-extents for positioning centers
+        float halfWall = wallThickness / 2f;
         float halfX = outerSize.x / 2f;
         float halfY = outerSize.y / 2f;
         float halfZ = outerSize.z / 2f;
-        float halfWall = wallThickness / 2f;
 
-        // 1. Top & Bottom Colliders (Full X and Z span)
-        top.size = new Vector3(outerSize.x, wallThickness, outerSize.z);
-        top.center = new Vector3(0f, halfY - halfWall, 0f);
+        // Expanded lengths so each wall overlaps adjacent walls by 1 wallThickness on all sides
+        float fullX = outerSize.x + (2f * wallThickness);
+        float fullY = outerSize.y + (2f * wallThickness);
+        float fullZ = outerSize.z + (2f * wallThickness);
 
-        bottom.size = new Vector3(outerSize.x, wallThickness, outerSize.z);
-        bottom.center = new Vector3(0f, -halfY + halfWall, 0f);
+        // 1. Top & Bottom Colliders
+        // Sits above/below outerSize; extends full X and Z so corners overlap side walls
+        top.size = new Vector3(fullX, wallThickness, fullZ);
+        top.center = new Vector3(0f, halfY + halfWall, 0f);
 
-        // 2. Left & Right Colliders (Full Y and Z span - overlaps top/bottom corners)
-        left.size = new Vector3(wallThickness, outerSize.y, outerSize.z);
-        left.center = new Vector3(-halfX + halfWall, 0f, 0f);
+        bottom.size = new Vector3(fullX, wallThickness, fullZ);
+        bottom.center = new Vector3(0f, -halfY - halfWall, 0f);
 
-        right.size = new Vector3(wallThickness, outerSize.y, outerSize.z);
-        right.center = new Vector3(halfX - halfWall, 0f, 0f);
+        // 2. Left & Right Colliders
+        // Sits left/right of outerSize; extends full Y and Z so corners overlap top/bottom/front/back
+        left.size = new Vector3(wallThickness, fullY, fullZ);
+        left.center = new Vector3(-halfX - halfWall, 0f, 0f);
 
-        // 3. Front & Back Colliders (Full X and Y span - overlaps side and top/bottom corners)
-        front.size = new Vector3(outerSize.x, outerSize.y, wallThickness);
-        front.center = new Vector3(0f, 0f, halfZ - halfWall);
+        right.size = new Vector3(wallThickness, fullY, fullZ);
+        right.center = new Vector3(halfX + halfWall, 0f, 0f);
 
-        back.size = new Vector3(outerSize.x, outerSize.y, wallThickness);
-        back.center = new Vector3(0f, 0f, -halfZ + halfWall);
+        // 3. Front & Back Colliders
+        // Sits front/back of outerSize; extends full X and Y so corners overlap side/top/bottom
+        front.size = new Vector3(fullX, fullY, wallThickness);
+        front.center = new Vector3(0f, 0f, halfZ + halfWall);
+
+        back.size = new Vector3(fullX, fullY, wallThickness);
+        back.center = new Vector3(0f, 0f, -halfZ - halfWall);
     }
 
     private BoxCollider GetOrAddCollider(string childName)

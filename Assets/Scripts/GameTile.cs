@@ -4,26 +4,41 @@ using UnityEngine;
 public class GameTile : MonoBehaviour
 {
     [Header("Materials")]
-    [SerializeField] private Material unpaintedMaterial;
-    [SerializeField] private Material paintedMaterial;
+    [SerializeField]
+    private Material paintedMaterial;
 
     [Header("Juice Settings")]
-    [SerializeField] private float bounceAmount = 0.15f;
-    [SerializeField] private float bounceDuration = 0.2f;
+    [SerializeField]
+    private float bounceAmount = 0.15f;
+    [SerializeField]
+    private float bounceDuration = 0.2f;
 
-    [SerializeField] private MeshRenderer meshRenderer;
+    [SerializeField]
+    private MeshRenderer meshRenderer;
     private Vector3 originalScale;
-    public bool IsPainted { get; private set; } = false;
+    public bool IsPainted { get; private set; }
 
     private void Awake()
     {
-        originalScale = transform.localScale;
+        originalScale = meshRenderer.transform.localScale;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (!IsPainted)
         {
+            for (var i = 0; i < collision.contactCount; i++)
+            {
+                var contact = collision.GetContact(i);
+                var isActuallyTouching = contact.separation <= 0.00001f;
+
+                if (isActuallyTouching)
+                {
+                    Debug.Log(collision.gameObject);
+                    PaintTile();
+                    break;
+                }
+            }
             PaintTile();
         }
     }
@@ -45,10 +60,10 @@ public class GameTile : MonoBehaviour
 
     private IEnumerator AnimateBounce()
     {
-        float elapsed = 0f;
+        var elapsed = 0f;
 
         // Squash down (compress Y, expand X and Z)
-        Vector3 squashedScale = new Vector3(
+        var squashedScale = new Vector3(
             originalScale.x * (1f + bounceAmount),
             originalScale.y * (1f - bounceAmount),
             originalScale.z * (1f + bounceAmount)
@@ -58,8 +73,8 @@ public class GameTile : MonoBehaviour
         while (elapsed < bounceDuration * 0.5f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / (bounceDuration * 0.5f);
-            transform.localScale = Vector3.Lerp(originalScale, squashedScale, t);
+            var t = elapsed / (bounceDuration * 0.5f);
+            meshRenderer.transform.localScale = Vector3.Lerp(originalScale, squashedScale, t);
             yield return null;
         }
 
@@ -69,11 +84,11 @@ public class GameTile : MonoBehaviour
         while (elapsed < bounceDuration * 0.5f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / (bounceDuration * 0.5f);
-            transform.localScale = Vector3.Lerp(squashedScale, originalScale, t);
+            var t = elapsed / (bounceDuration * 0.5f);
+            meshRenderer.transform.localScale = Vector3.Lerp(squashedScale, originalScale, t);
             yield return null;
         }
 
-        transform.localScale = originalScale;
+        meshRenderer.transform.localScale = originalScale;
     }
 }
